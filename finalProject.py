@@ -2,69 +2,86 @@ from pygridmas import World, Agent, Vec2D, Colors, Visualizer
 import random
 import math
 
-size = 300
+size = 100
 world = World(w=size, h=size, torus_enabled=True)
-worldCenter = (Vec2D(math.floor(size/2), math.floor(size/2)))
-NrOfOres = 50
-NrOfExplores = 10
-NrOfTransporters = 10
+worldCenter = Vec2D(size // 2, size // 2)
+n_ores = 50
+n_explorers = 10
+n_transporters = 10
+
+BLOCK = "BLOCK"
+BASE = "BASE"
+ORE = "ORE"
+EXPLORER = "EXPLORER"
+TRANSPORTER = "TRANSPORTER"
+
 
 class Ore(Agent):
     color = Colors.YELLOW
-    group_ids = {1}
+    group_ids = {ORE}
+
 
 class Base(Agent):
     color = Colors.BLUE
+    group_ids = {BASE}
+
 
 class Explorer(Agent):
     color = Colors.GREEN
-    start_target: Vec2D = None
-    reached_target = False
-
-    def initialize(self):
-        self.start_target = Vec2D(
-        random.randint(1,size-1),
-        random.randint(1,size-1)
-        )
+    group_ids = {EXPLORER}
 
     def step(self):
-#        ores = self.box_scan(5, group_id=1)
-
-#        if len(ores) > 0:
-#            self.nearest_ore = ores[0]
-#            self.start_target = nearest_ore.pos()
-
-        if not self.reached_target:
-            self.move_towards(self.start_target)
-            self.reached_target = self.pos() == self.start_target
-        else:
-            self.start_target = Vec2D(
-            random.randint(1,size-1),
-            random.randint(1,size-1)
-            )
-            self.reached_target = self.pos() == self.start_target
+        explorers = self.box_scan(10, EXPLORER)
+        if explorers:
+            for explorer in explorers:
+                if explorer.pos() != explorer.pos():
+                    self.move_away_from(explorers[0].pos())
+                    return
+        self.move_rel(Vec2D.random_grid_dir())
 
 
 class Transporter(Agent):
     color = Colors.RED
-    start_target: Vec2D = None
-    reached_target = False
+    group_ids = {TRANSPORTER}
+    state = 'idle'
+    base: Agent = None
+    target: Vec2D = None
+    ore_pos: list = None
 
+    def __init__(self, base):
+        super(Transporter).__init__()
+        self.base = base
 
+    def step(self):
+        if self.state == 'idle':
+            # Look for explorers and follow one of the nearest ones.
+            # If there are none, go to the base.
+            explorers = self.box_scan(10, EXPLORER)
+            if explorers:
+                dist = self.inf_dist(explorers[0].pos())
+                explorers = [a for a in explorers if self.inf_dist(a.pos()) == dist]
+                self.target = random.choice(explorers).pos()
+            else:
+                self.target = self.base.pos()
+            self.state = 'go to target'
+        elif self.state == 'go to target':
+            if self.pos() == self.target:
+                self.state = 'idle'
+                self.step()
+            else:
+                self.move_towards(self.target)
 
-# Add a number of Repulsers to the world
-for i in range(NrOfOres):
+base = Base()
+world.add_agent(base, pos=worldCenter)
+
+for _ in range(n_ores):
     world.add_agent(Ore())
 
-for i in range(NrOfExplores):
+for _ in range(n_explorers):
     world.add_agent(Explorer(), pos=worldCenter)
 
-for i in range(NrOfTransporters):
-    world.add_agent(Transporter(), pos=worldCenter)
+for _ in range(n_transporters):
+    world.add_agent(Transporter(base), pos=worldCenter)
 
-world.add_agent(Base(), pos=worldCenter)
-
-# Visualize the world. The visualizer will call world.step(),
-# trying to maintain a certain target speed (steps per second)
-vis = Visualizer(world, scale=2, target_speed=40)
+vis = Visualizer(world, scale=3, target_speed=40)
 vis.start()
