@@ -53,6 +53,7 @@ class Explorer(Agent):
         #MOVE TOWARDS TARGET SET IN INIT OR OTHER STATE
         if self.explorerState == "MOVE_RANDOM":
             if not self.reached_target:
+                print("Agent ", self.idx, " calls move towards")
                 self.move_towards(self.start_target)
                 self.reached_target = self.pos() == self.start_target
             else:
@@ -72,13 +73,14 @@ class Explorer(Agent):
 
 
 
-        
+
         elif self.explorerState == "SCAN":
             agents = self.box_scan(10)
 
             if len(agents) > 0:
                 self.ores = [agent for agent in agents if ORE in agent.group_ids]
                 self.explores = [agent for agent in agents if EXPLORER in agent.group_ids]
+                self.transporters = [agent for agent in agents if TRANSPORTER in agent.group_ids]
 
                 if len(self.ores) > 0:
                     self.explorerState = "EMIT_EVENT_ORE_POS"
@@ -103,7 +105,10 @@ class Explorer(Agent):
         elif self.explorerState == "EMIT_EVENT_ORE_POS":
             self.emit_event(rng=25, data=self.ores, group_id=TRANSPORTER)
             self.start_target = worldCenter
-            self.explorerState = "MOVE_TO_BASE"
+            if len(self.transporters) > 0:
+                self.explorerState = "MOVE_RANDOM"
+            else:
+                self.explorerState = "MOVE_TO_BASE"
 
 
         elif self.explorerState == "MOVE_TO_BASE":
@@ -123,6 +128,7 @@ class Explorer(Agent):
                     random.randint(self.pos().y + self.step_size*0.5, self.pos().y + self.step_size*2)
                     )
                 self.explorerState = "MOVE_RANDOM"
+                self.reached_target = self.pos() == self.start_target
 
 
 
