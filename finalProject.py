@@ -1,11 +1,13 @@
 from pygridmas import World, Agent, Vec2D, Colors, Visualizer
 import random
 import math
+import tsm
 
-size = 100
+size = 200
+ore_density = 0.1
 world = World(w=size, h=size, torus_enabled=True)
-worldCenter = Vec2D(size // 2, size // 2)
-n_ores = 50
+base_pos = Vec2D(size // 3, size // 3)
+n_ores = round(size ** 2 * ore_density)
 n_explorers = 10
 n_transporters = 10
 
@@ -17,8 +19,11 @@ TRANSPORTER = "TRANSPORTER"
 
 
 class Ore(Agent):
-    color = Colors.YELLOW
+    color = (.1, .1, 0)
     group_ids = {ORE}
+
+    def initialize(self):
+        self.deactivate()
 
 
 class Base(Agent):
@@ -29,198 +34,192 @@ class Base(Agent):
 class Explorer(Agent):
     color = Colors.GREEN
     group_ids = {EXPLORER}
-    start_target: Vec2D = None
-    reached_target = False
+    group_collision_ids = {BLOCK}
+    target: Vec2D = None
     moveType = ""
-    explorerState = "MOVE_RANDOM"
-    step_size = 70
+    state = "MOVE_TO_TARGET"
+    step_size = 10
+    ore_data = None
+    base: Agent = None
+    dir: Vec2D = None
 
+    def __init__(self, base):
+        super().__init__()
+        self.base = base
+
+    def set_new_random_rel_target(self):
+        self.target = Vec2D(
+            random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
+            random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
+        )
+        self.target = world.torus(self.target)
 
     def initialize(self):
-        if (self.idx % 2) == 0:
-            self.start_target = Vec2D(
-            random.randint(self.pos().x - self.step_size*2, self.pos().x - self.step_size*0.5),
-            random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
-            )
-            self.start_target = world.torus(self.start_target)
-        else:
-            self.start_target = Vec2D(
-            random.randint(self.pos().x + self.step_size*0.5, self.pos().x + self.step_size*2),
-            random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
-            )
-            self.start_target = world.torus(self.start_target)
+        self.set_new_random_rel_target()
 
+    def reached_target(self):
+        return self.target == self.pos()
 
     def step(self):
-        self.start_target = world.torus(self.start_target)
-        #MOVE TOWARDS TARGET SET IN INIT OR OTHER STATE
-        if self.explorerState == "MOVE_RANDOM":
-            if not self.reached_target:
-                print("Agent ", self.idx, " calls move towards target: ",
-                self.start_target.x, ",",self.start_target.y, " own pos is: ", self.pos().x, ",", self.pos().y)
-
-                self.move_towards(self.start_target)
-                self.reached_target = self.pos() == self.start_target
+        if self.state == "MOVE_TO_TARGET":
+            self.color = Colors.GREEN
+            if self.reached_target():
+                if self.ore_data:
+                    transporters = self.box_scan(10, TRANSPORTER)
+                    self.ore_data = (len(transporters), self.ore_data)
+                    self.state = "EMIT_EVENT_ORE_POS"
+                else:
+                    self.state = "SCAN"
             else:
-                self.reached_target = self.pos() == self.start_target
-                self.explorerState = "SCAN"
+                if not self.move_towards(self.target):
+                    self.move_in_dir(Vec2D.random_grid_dir())
 
-
-
-        #MOVE TOWARDS TARGET SET IN INIT OR OTHER STATE
-        elif self.explorerState == "MOVE_REPULSE":
-            if not self.reached_target:
-                self.move_towards(self.repulse_target)
-                self.reached_target = self.pos() == self.repulse_target
-            else:
-                self.reached_target = self.pos() == self.start_target
-                self.explorerState = "SCAN"
-
-
-
-
-        elif self.explorerState == "SCAN":
+        elif self.state == "SCAN":
+            self.color = Colors.GREY25
             agents = self.box_scan(10)
+            ores = [a for a in agents if ORE in a.group_ids]
+            explorers = [a for a in agents if EXPLORER in a.group_ids]
+            transporters = [a for a in agents if TRANSPORTER in a.group_ids]
 
-            if len(agents) > 0:
-                self.ores = [agent for agent in agents if ORE in agent.group_ids]
-                self.explores = [agent for agent in agents if EXPLORER in agent.group_ids]
-                self.transporters = [agent for agent in agents if TRANSPORTER in agent.group_ids]
-
-                if len(self.ores) > 0:
-                    self.explorerState = "EMIT_EVENT_ORE_POS"
+            if ores:
+                rel_ore_pos = [self.vec_to(o.pos()) for o in ores]
+                rel_ore_cog = sum(rel_ore_pos, Vec2D()) / len(ores)
+                if rel_ore_cog.magnitude() > 3:
+                    # TODO: set max iterations
+                    self.color = Colors.MAGENTA
+                    self.target = self.world.torus(self.pos() + rel_ore_cog.round())
+                    self.state = "MOVE_TO_TARGET"
                 else:
-                    if len(self.explores) > 0:
-                        other_agent = random.choice(self.explores)
-                        dir = self.world.shortest_way(other_agent.pos(), self.pos())
-                        if dir.magnitude() != 0:
-                            normdir = dir/dir.magnitude()
-                        else:
-                            normdir = Vec2D(
-                            random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
-                            random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
-                            )
-                        self.repulse_target = other_agent.pos() + (normdir * 20).round()
-                        self.repulse_target = world.torus(self.repulse_target)
-                        self.reached_target = self.pos() == self.repulse_target
-                        self.moveType = "MOVE_REPULSE"
-                    self.explorerState = self.moveType
+                    rel_ore_pos = [self.vec_to(o.pos()) for o in ores]
+                    tsm_idx = tsm.iterative_inf_norm_tsm(rel_ore_pos, n=1000)
+                    ores = [ores[i] for i in tsm_idx]
+                    self.ore_data = [(o.idx, o.pos()) for o in ores]
+                    if transporters:
+                        self.ore_data = (len(transporters), self.ore_data)
+                        self.state = "EMIT_EVENT_ORE_POS"
+                    else:
+                        self.target = self.base.pos()
+                        self.state = "MOVE_TO_TARGET"
+            elif explorers:
+                other_expl = random.choice(explorers)
+                dir = other_expl.vec_to(self.pos())
+                dir = dir / dir.magnitude() if not dir.is_zero_vec() else Vec2D.random_dir()
+                self.target = self.world.torus(other_expl.pos() + (dir * 20).round())
+                self.state = "MOVE_TO_TARGET"
             else:
-                self.start_target = Vec2D(
-                random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
-                random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
-                )
-                self.start_target = world.torus(self.start_target)
-                self.reached_target = self.pos() == self.start_target
-                self.explorerState = "MOVE_RANDOM"
+                self.set_new_random_rel_target()
+                self.state = "MOVE_TO_TARGET"
 
+        elif self.state == "EMIT_EVENT_ORE_POS":
+            self.color = Colors.WHITE
+            self.emit_event(rng=25, data=self.ore_data, group_id=TRANSPORTER)
+            self.ore_data = None
+            self.set_new_random_rel_target()
+            self.state = "MOVE_TO_TARGET"
 
-        elif self.explorerState == "EMIT_EVENT_ORE_POS":
-            self.emit_event(rng=25, data=self.ores, group_id=TRANSPORTER)
-            self.start_target = worldCenter
-            if len(self.transporters) > 0:
-                self.start_target = Vec2D(
-                random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
-                random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
-                )
-                self.start_target = world.torus(self.start_target)
-                self.explorerState = "MOVE_RANDOM"
-            else:
-                self.explorerState = "MOVE_TO_BASE"
-
-
-        elif self.explorerState == "MOVE_TO_BASE":
-            if not self.reached_target:
-                self.move_towards(self.start_target)
-                self.reached_target = self.pos() == self.start_target
-            else:
-                self.reached_target = self.pos() == self.start_target
-                if (self.idx % 2) == 0:
-                    self.start_target = Vec2D(
-                    random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
-                    random.randint(self.pos().y - self.step_size*2, self.pos().y - self.step_size*0.5)
-                    )
-                    self.start_target = world.torus(self.start_target)
-                else:
-                    self.start_target = Vec2D(
-                    random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
-                    random.randint(self.pos().y + self.step_size*0.5, self.pos().y + self.step_size*2)
-                    )
-                    self.start_target = world.torus(self.start_target)
-                self.explorerState = "MOVE_RANDOM"
-
-
+        # do not block on base station
+        if self.pos() == self.base.pos():
+            if BLOCK in self.group_ids:
+                self.group_ids.remove(BLOCK)
+        else:
+            self.group_ids.add(BLOCK)
 
 
 class Transporter(Agent):
     color = Colors.RED
     group_ids = {TRANSPORTER}
-    state = 'idle'
+    group_collision_ids = {BLOCK}
+    state = 'IDLE'
     base: Agent = None
     target: Vec2D = None
-    ore_pos: list = None
+    ores: list = None
+    cargo = 0
+    collected = set()
+    failed_collect_attempts = 0
 
     def __init__(self, base):
-        super(Transporter).__init__()
+        super().__init__()
         self.base = base
 
     def step(self):
-        if self.state == 'idle':
+        if self.state == 'IDLE':
             # Look for explorers and follow one of the nearest ones.
             # If there are none, go to the base.
-            explorers = self.box_scan(10, EXPLORER)
+            agents = self.box_scan(10)
+            explorers = [a for a in agents if EXPLORER in a.group_ids]
+            transporters = [a for a in agents if TRANSPORTER in a.group_ids]
             if explorers:
-                dist = self.inf_dist(explorers[0].pos())
-                explorers = [a for a in explorers if self.inf_dist(a.pos()) == dist]
                 self.target = random.choice(explorers).pos()
+                if transporters:
+                    if random.random() < 1 - 1 / (len(transporters) + 1):
+                        dir = random.choice(transporters).vec_to(self.pos())
+                        dir = dir.normalize() if not dir.is_zero_vec() else Vec2D.random_dir()
+                        dir *= 10
+                        self.target = self.world.torus(self.pos() + dir.round())
             else:
                 self.target = self.base.pos()
-            self.state = 'go to target'
-        elif self.state == 'go to target':
+            self.target = self.base.pos()  # TODO: temp
+            self.state = 'MOVE_TO_TARGET'
+        elif self.state == 'MOVE_TO_TARGET':
             if self.pos() == self.target:
-                self.state = 'idle'
-                self.step()
+                self.state = 'IDLE'
             else:
-                self.move_towards(self.target)
+                if not self.move_towards(self.target):
+                    self.move_in_dir(Vec2D.random_grid_dir())
+        elif self.state == 'COLLECT_ORES':
+            ore_idx, ore_pos = self.ores[0]
+            if ore_pos == self.pos():
+                self.ores.pop(0)
+                if self.try_collect_ore(ore_idx):
+                    self.cargo += 1
+                    self.collected.add(ore_idx)
+                else:
+                    self.failed_collect_attempts += 1
+                    if self.failed_collect_attempts >= 2:  # two failed attempts in a row
+                        self.ores = []
+                if len(self.ores) == 0:
+                    self.state = 'IDLE'
+            else:
+                if not self.move_towards(ore_pos):
+                    self.move_in_dir(Vec2D.random_grid_dir())
+        else:
+            assert False, "shouldn't reach unknown state: '{}'".format(self.state)
+
+        # do not block on base station
+        if self.pos() == self.base.pos():
+            if BLOCK in self.group_ids:
+                self.group_ids.remove(BLOCK)
+        else:
+            self.group_ids.add(BLOCK)
+
+    def try_collect_ore(self, idx):
+        if idx in self.world.agents:
+            self.world.remove_agent(idx)
+            return True
+        else:
+            return False
+
+    def receive_event(self, _, ore_data):
+        if self.ores:
+            return
+        n_transporters, ores = ore_data
+        if random.random() < 1 / max(n_transporters, 1):
+            self.ores = list(ores)
+            self.failed_collect_attempts = 0
+            self.state = 'COLLECT_ORES'
+
 
 base = Base()
-world.add_agent(base, pos=worldCenter)
+world.add_agent(base, pos=base_pos)
+
+for _ in range(n_explorers):
+    world.add_agent(Explorer(base), pos=base_pos)
+
+for _ in range(n_transporters):
+    world.add_agent(Transporter(base), pos=base_pos)
 
 for _ in range(n_ores):
     world.add_agent(Ore())
 
-for _ in range(n_explorers):
-    world.add_agent(Explorer(), pos=worldCenter)
-
-for _ in range(n_transporters):
-    world.add_agent(Transporter(base), pos=worldCenter)
-
 vis = Visualizer(world, scale=3, target_speed=40)
 vis.start()
-
-
-
-'''
-                if len(self.explores) > 0:
-                    other_agent = random.choice(self.explores)
-                    dir = self.world.shortest_way(other_agent.pos(), self.pos())
-                    if dir.magnitude() == 0:
-                        self.start_target = Vec2D(
-                        random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
-                        random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
-                        )
-                        self.reached_target = self.pos() == self.start_target
-                        self.moveType = "MOVE_RANDOM"
-                    else:
-                        normdir = dir/dir.magnitude()
-                        self.repulse_target = other_agent.pos() + (normdir * 20).round()
-                        self.reached_target = self.pos() == self.repulse_target
-                        self.moveType = "MOVE_REPULSE"
-                else:
-                    self.start_target = Vec2D(
-                    random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
-                    random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
-                    )
-                    self.reached_target = self.pos() == self.start_target
-                    self.moveType = "MOVE_RANDOM"
-'''
