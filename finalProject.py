@@ -39,21 +39,23 @@ class Explorer(Agent):
             random.randint(self.pos().x - self.step_size*2, self.pos().x - self.step_size*0.5),
             random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
             )
+            self.start_target = world.torus(self.start_target)
         else:
             self.start_target = Vec2D(
             random.randint(self.pos().x + self.step_size*0.5, self.pos().x + self.step_size*2),
             random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
             )
+            self.start_target = world.torus(self.start_target)
 
 
     def step(self):
-        print("Agent ", self.idx, " is in state: ", self.explorerState)
-
-
+        self.start_target = world.torus(self.start_target)
         #MOVE TOWARDS TARGET SET IN INIT OR OTHER STATE
         if self.explorerState == "MOVE_RANDOM":
             if not self.reached_target:
-                print("Agent ", self.idx, " calls move towards")
+                print("Agent ", self.idx, " calls move towards target: ",
+                self.start_target.x, ",",self.start_target.y, " own pos is: ", self.pos().x, ",", self.pos().y)
+
                 self.move_towards(self.start_target)
                 self.reached_target = self.pos() == self.start_target
             else:
@@ -88,8 +90,15 @@ class Explorer(Agent):
                     if len(self.explores) > 0:
                         other_agent = random.choice(self.explores)
                         dir = self.world.shortest_way(other_agent.pos(), self.pos())
-                        normdir = dir/dir.magnitude()
+                        if dir.magnitude() != 0:
+                            normdir = dir/dir.magnitude()
+                        else:
+                            normdir = Vec2D(
+                            random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
+                            random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
+                            )
                         self.repulse_target = other_agent.pos() + (normdir * 20).round()
+                        self.repulse_target = world.torus(self.repulse_target)
                         self.reached_target = self.pos() == self.repulse_target
                         self.moveType = "MOVE_REPULSE"
                     self.explorerState = self.moveType
@@ -98,6 +107,7 @@ class Explorer(Agent):
                 random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
                 random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
                 )
+                self.start_target = world.torus(self.start_target)
                 self.reached_target = self.pos() == self.start_target
                 self.explorerState = "MOVE_RANDOM"
 
@@ -106,6 +116,11 @@ class Explorer(Agent):
             self.emit_event(rng=25, data=self.ores, group_id=TRANSPORTER)
             self.start_target = worldCenter
             if len(self.transporters) > 0:
+                self.start_target = Vec2D(
+                random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
+                random.randint(self.pos().y - self.step_size, self.pos().y + self.step_size)
+                )
+                self.start_target = world.torus(self.start_target)
                 self.explorerState = "MOVE_RANDOM"
             else:
                 self.explorerState = "MOVE_TO_BASE"
@@ -122,13 +137,14 @@ class Explorer(Agent):
                     random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
                     random.randint(self.pos().y - self.step_size*2, self.pos().y - self.step_size*0.5)
                     )
+                    self.start_target = world.torus(self.start_target)
                 else:
                     self.start_target = Vec2D(
                     random.randint(self.pos().x - self.step_size, self.pos().x + self.step_size),
                     random.randint(self.pos().y + self.step_size*0.5, self.pos().y + self.step_size*2)
                     )
+                    self.start_target = world.torus(self.start_target)
                 self.explorerState = "MOVE_RANDOM"
-                self.reached_target = self.pos() == self.start_target
 
 
 
