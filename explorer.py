@@ -36,7 +36,7 @@ class Explorer(Agent):
         return self.target == self.pos()
 
     def charge_energy(self, energy_comsumption):
-        self.energy = self.energy - energy_comsumption
+        self.energy -= energy_comsumption
 
     def step(self):
         if self.pos() == self.base.pos():
@@ -65,7 +65,7 @@ class Explorer(Agent):
             else:
                 if not self.move_towards(self.target):
                     self.move_in_dir(Vec2D.random_grid_dir())
-                    self.charge_energy(1)
+                    self.charge_energy(self.masparams.Q)
 
         elif self.state == "SCAN":
             self.color = Colors.GREY25
