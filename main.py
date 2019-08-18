@@ -21,5 +21,5 @@ for _ in range(mp.Y):
 for _ in range(n_ores):
     world.add_agent(Ore())
 
-vis = Visualizer(world, scale=3, target_speed=40)
+vis = Visualizer(world, scale=3, target_speed=15)
 vis.start()

@@ -3,6 +3,7 @@ from pygridmas import Agent, Colors, Vec2D
 
 from common import ORE, BLOCK, EXPLORER, TRANSPORTER
 import tsm
+from masparams import MasParams
 
 
 class Explorer(Agent):
@@ -17,8 +18,11 @@ class Explorer(Agent):
     base: Agent = None
     dir: Vec2D = None
 
-    def __init__(self, base):
+    def __init__(self, base, masparams: MasParams):
         super().__init__()
+        self.masparams = masparams
+        self.energy = masparams.E
+        self.perception_range = masparams.P
         self.base = base
 
     def set_new_random_rel_target(self):
@@ -31,12 +35,24 @@ class Explorer(Agent):
     def reached_target(self):
         return self.target == self.pos()
 
+    def charge_energy(self, energy_comsumption):
+        self.energy = self.energy - energy_comsumption
+
     def step(self):
+        if self.pos() == self.base.pos():
+            self.energy = self.masparams.E
+
+        base_dis = self.world.shortest_way(self.pos(), self.base.pos())
+        if base_dis.inf_magnitude >= self.energy + 1:
+            self.target = self.base.pos()
+            self.state = "MOVE_TO_TARGET"
+
         if self.state == "MOVE_TO_TARGET":
             self.color = Colors.GREEN
             if self.reached_target():
                 if self.ore_data:
-                    transporters = self.box_scan(10, TRANSPORTER)
+                    transporters = self.box_scan(self.perception_range / 2, TRANSPORTER)
+                    self.charge_energy(self.perception_range)
                     self.ore_data = (len(transporters), self.ore_data)
                     self.state = "EMIT_EVENT_ORE_POS"
                 else:
@@ -44,10 +60,12 @@ class Explorer(Agent):
             else:
                 if not self.move_towards(self.target):
                     self.move_in_dir(Vec2D.random_grid_dir())
+                    self.charge_energy(1)
 
         elif self.state == "SCAN":
             self.color = Colors.GREY25
-            agents = self.box_scan(10)
+            agents = self.box_scan(self.perception_range / 2)
+            self.charge_energy(self.perception_range)
             ores = [a for a in agents if ORE in a.group_ids]
             explorers = [a for a in agents if EXPLORER in a.group_ids]
             transporters = [a for a in agents if TRANSPORTER in a.group_ids]
@@ -84,6 +102,7 @@ class Explorer(Agent):
         elif self.state == "EMIT_EVENT_ORE_POS":
             self.color = Colors.WHITE
             self.emit_event(25, "ORE_POSITIONS", self.ore_data, TRANSPORTER)
+            self.charge_energy(1)
             self.ore_data = None
             self.set_new_random_rel_target()
             self.state = "MOVE_TO_TARGET"
