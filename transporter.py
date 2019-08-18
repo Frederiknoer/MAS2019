@@ -2,6 +2,7 @@ import random
 
 from pygridmas import Agent, Colors, Vec2D
 from common import TRANSPORTER, BLOCK, EXPLORER
+from masparams import MasParams
 
 
 class Transporter(Agent):
@@ -13,18 +14,23 @@ class Transporter(Agent):
     target: Vec2D = None
     ores: list = None
     cargo = 0
-    collected = set()
     failed_collect_attempts = 0
+    energy = 0
 
-    def __init__(self, base):
+    def __init__(self, base, masparams: MasParams):
         super().__init__()
         self.base = base
+        self.masparams = masparams
 
     def step(self):
+        if self.pos() == self.base.pos():
+            self.energy = self.masparams.E
+
         if self.state == 'IDLE':
             # Look for explorers and follow one of the nearest ones.
             # If there are none, go to the base.
-            agents = self.box_scan(10)
+            agents = self.box_scan(self.masparams.P // 2)
+            self.energy -= self.masparams.P
             explorers = [a for a in agents if EXPLORER in a.group_ids]
             transporters = [a for a in agents if TRANSPORTER in a.group_ids]
             if explorers:
@@ -43,24 +49,24 @@ class Transporter(Agent):
             if self.pos() == self.target:
                 self.state = 'IDLE'
             else:
-                if not self.move_towards(self.target):
-                    self.move_in_dir(Vec2D.random_grid_dir())
+                if self.move_towards(self.target) or self.move_in_dir(Vec2D.random_grid_dir()):
+                    self.energy -= self.masparams.Q
         elif self.state == 'COLLECT_ORES':
             ore_idx, ore_pos = self.ores[0]
             if ore_pos == self.pos():
                 self.ores.pop(0)
                 if self.try_collect_ore(ore_idx):
                     self.cargo += 1
-                    self.collected.add(ore_idx)
                 else:
                     self.failed_collect_attempts += 1
                     if self.failed_collect_attempts >= 2:  # two failed attempts in a row
                         self.ores = []
                 if len(self.ores) == 0:
                     self.state = 'IDLE'
+                self.energy -= 1
             else:
-                if not self.move_towards(ore_pos):
-                    self.move_in_dir(Vec2D.random_grid_dir())
+                if self.move_towards(ore_pos) or self.move_in_dir(Vec2D.random_grid_dir()):
+                    self.energy -= 1
         else:
             assert False, "shouldn't reach unknown state: '{}'".format(self.state)
 
