@@ -13,7 +13,7 @@ base = Base()
 world.add_agent(base, pos=base_pos)
 
 for _ in range(mp.X):
-    world.add_agent(Explorer(base), pos=base_pos)
+    world.add_agent(Explorer(base, mp), pos=base_pos)
 
 for _ in range(mp.Y):
     world.add_agent(Transporter(base, mp), pos=base_pos)

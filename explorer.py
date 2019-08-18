@@ -43,7 +43,7 @@ class Explorer(Agent):
             self.energy = self.masparams.E
 
         base_dis = self.world.shortest_way(self.pos(), self.base.pos())
-        if base_dis.inf_magnitude >= self.energy + 1:
+        if base_dis.inf_magnitude() >= self.energy + 1:
             self.target = self.base.pos()
             self.state = "MOVE_TO_TARGET"
 
@@ -51,7 +51,7 @@ class Explorer(Agent):
             self.color = Colors.GREEN
             if self.reached_target():
                 if self.ore_data:
-                    transporters = self.box_scan(self.perception_range / 2, TRANSPORTER)
+                    transporters = self.box_scan(self.perception_range // 2, TRANSPORTER)
                     self.charge_energy(self.perception_range)
                     self.ore_data = (len(transporters), self.ore_data)
                     self.state = "EMIT_EVENT_ORE_POS"
@@ -64,7 +64,7 @@ class Explorer(Agent):
 
         elif self.state == "SCAN":
             self.color = Colors.GREY25
-            agents = self.box_scan(self.perception_range / 2)
+            agents = self.box_scan(self.perception_range // 2)
             self.charge_energy(self.perception_range)
             ores = [a for a in agents if ORE in a.group_ids]
             explorers = [a for a in agents if EXPLORER in a.group_ids]
