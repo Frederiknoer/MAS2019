@@ -42,8 +42,13 @@ class Explorer(Agent):
         if self.pos() == self.base.pos():
             self.energy = self.masparams.E
 
-        base_dis = self.world.shortest_way(self.pos(), self.base.pos())
-        if base_dis.inf_magnitude() >= self.energy + 1:
+        if self.energy <= 0:
+            self.deactivate()
+            self.group_ids.remove(Explorer)
+            self.color = Colors.MAGENTA
+            return
+
+        if self.energy <= self.vec_to(self.base.pos()).inf_magnitude() * self.masparams.Q - self.masparams.P:
             self.target = self.base.pos()
             self.state = "MOVE_TO_TARGET"
 

@@ -5,6 +5,7 @@ from common import Base, Ore
 from masparams import MasParams
 
 mp = MasParams()
+mp.E = 100
 world = World(w=mp.G, h=mp.G, torus_enabled=True)
 base_pos = Vec2D(mp.G // 3, mp.G // 3)
 n_ores = round(mp.G ** 2 * mp.D)

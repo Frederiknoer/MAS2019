@@ -26,6 +26,16 @@ class Transporter(Agent):
         if self.pos() == self.base.pos():
             self.energy = self.masparams.E
 
+        if self.energy <= 0:
+            self.deactivate()
+            self.group_ids.remove(TRANSPORTER)
+            self.color = Colors.CYAN
+            return
+
+        if self.energy <= self.vec_to(self.base.pos()).inf_magnitude() * self.masparams.Q - self.masparams.P:
+            self.target = self.base.pos()
+            self.state = "MOVE_TO_TARGET"
+
         if self.state == 'IDLE':
             # Look for explorers and follow one of the nearest ones.
             # If there are none, go to the base.
