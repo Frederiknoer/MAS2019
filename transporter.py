@@ -1,46 +1,26 @@
 import random
 
-from pygridmas import Agent, Colors, Vec2D
-from common import TRANSPORTER, BLOCK, EXPLORER
-from masparams import MasParams
+from pygridmas import Colors, Vec2D
+from common import TRANSPORTER, EXPLORER
+from robot import Robot
 
 
-class Transporter(Agent):
+class Transporter(Robot):
     color = Colors.RED
     group_ids = {TRANSPORTER}
-    group_collision_ids = {BLOCK}
     state = 'IDLE'
-    base: Agent = None
-    target: Vec2D = None
     ores: list = None
     cargo = 0
     failed_collect_attempts = 0
-    energy = 0
-
-    def __init__(self, base, masparams: MasParams):
-        super().__init__()
-        self.base = base
-        self.masparams = masparams
 
     def step(self):
-        if self.pos() == self.base.pos():
-            self.energy = self.masparams.E
-
-        if self.energy <= 0:
-            self.deactivate()
-            self.group_ids.remove(TRANSPORTER)
-            self.color = Colors.CYAN
-            return
-
-        if self.energy <= self.vec_to(self.base.pos()).inf_magnitude() * self.masparams.Q - self.masparams.P:
-            self.target = self.base.pos()
-            self.state = "MOVE_TO_TARGET"
+        super().before_step()
 
         if self.state == 'IDLE':
             # Look for explorers and follow one of the nearest ones.
             # If there are none, go to the base.
-            agents = self.box_scan(self.masparams.P // 2)
-            self.energy -= self.masparams.P
+            agents = self.box_scan(self.mp.P // 2)
+            self.energy -= self.mp.P
             explorers = [a for a in agents if EXPLORER in a.group_ids]
             transporters = [a for a in agents if TRANSPORTER in a.group_ids]
             if explorers:
@@ -57,10 +37,10 @@ class Transporter(Agent):
             self.state = 'MOVE_TO_TARGET'
         elif self.state == 'MOVE_TO_TARGET':
             if self.pos() == self.target:
-                self.state = 'IDLE'
+                self.state = 'IDLE' if not self.ores else 'COLLECT_ORES'
             else:
                 if self.move_towards(self.target) or self.move_in_dir(Vec2D.random_grid_dir()):
-                    self.energy -= self.masparams.Q
+                    self.energy -= self.mp.Q
         elif self.state == 'COLLECT_ORES':
             ore_idx, ore_pos = self.ores[0]
             if ore_pos == self.pos():
@@ -80,12 +60,7 @@ class Transporter(Agent):
         else:
             assert False, "shouldn't reach unknown state: '{}'".format(self.state)
 
-        # do not block on base station
-        if self.pos() == self.base.pos():
-            if BLOCK in self.group_ids:
-                self.group_ids.remove(BLOCK)
-        else:
-            self.group_ids.add(BLOCK)
+        super().after_step()
 
     def try_collect_ore(self, idx):
         if idx in self.world.agents:
