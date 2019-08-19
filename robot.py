@@ -20,8 +20,12 @@ class Robot(Agent):
     def reached_target(self):
         return self.target == self.pos()
 
-    def charge_energy(self, energy_consumption):
+    def consume_energy(self, energy_consumption):
         self.energy -= energy_consumption
+
+    def energy_low(self):
+        # TODO: possibly remove the self.mp.P and make sure not to use that energy
+        return self.energy <= self.vec_to(self.base.pos()).inf_magnitude() * self.mp.Q + self.mp.P + 10
 
     def before_step(self):
         if self.at_base():
@@ -29,10 +33,10 @@ class Robot(Agent):
 
         if self.energy <= 0:
             self.deactivate()
-            self.group_ids = {BLOCK} if not self.at_base() else set()
+            self.group_ids = {BLOCK}
             self.color = Colors.MAGENTA
 
-        if self.energy <= self.vec_to(self.base.pos()).inf_magnitude() * self.mp.Q + self.mp.P + 10:
+        if self.energy_low():
             self.target = self.base.pos()
             self.state = "MOVE_TO_TARGET"
 

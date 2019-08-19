@@ -31,7 +31,7 @@ class Explorer(Robot):
                     self.dir = Vec2D.random_dir()
                 if self.ore_data:
                     transporters = self.box_scan(self.mp.P // 2, TRANSPORTER)
-                    self.charge_energy(self.mp.P)
+                    self.consume_energy(self.mp.P)
                     self.ore_data = (len(transporters), self.ore_data[1])
                     self.state = "EMIT_EVENT_ORE_POS"
                 else:
@@ -39,12 +39,12 @@ class Explorer(Robot):
             else:
                 if not self.move_towards(self.target):
                     self.move_in_dir(Vec2D.random_grid_dir())
-                    self.charge_energy(self.mp.Q)
+                    self.consume_energy(self.mp.Q)
 
         elif self.state == "SCAN":
             self.color = Colors.GREY25
             agents = self.box_scan(self.mp.P // 2)
-            self.charge_energy(self.mp.P)
+            self.consume_energy(self.mp.P)
             ores = [a for a in agents if ORE in a.group_ids]
             explorers = [a for a in agents if EXPLORER in a.group_ids]
             transporters = [a for a in agents if TRANSPORTER in a.group_ids]
@@ -81,7 +81,7 @@ class Explorer(Robot):
         elif self.state == "EMIT_EVENT_ORE_POS":
             self.color = Colors.WHITE
             self.emit_event(25, "ORE_POSITIONS", self.ore_data, TRANSPORTER)
-            self.charge_energy(1)
+            self.consume_energy(1)
             self.ore_data = None
             self.set_new_random_rel_target()
             self.state = "MOVE_TO_TARGET"

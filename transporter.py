@@ -1,7 +1,7 @@
 import random
 
 from pygridmas import Colors, Vec2D
-from common import TRANSPORTER, EXPLORER
+from common import TRANSPORTER, EXPLORER, BASE
 from robot import Robot
 
 
@@ -15,6 +15,10 @@ class Transporter(Robot):
 
     def step(self):
         super().before_step()
+
+        if self.at_base() and self.cargo:
+            self.emit_event(0, "ORE_DELIVERY", self.cargo, BASE)
+            self.cargo = 0
 
         if self.state == 'IDLE':
             # Look for explorers and follow one of the nearest ones.
@@ -36,7 +40,7 @@ class Transporter(Robot):
             self.target = self.base.pos()  # TODO: temp
             self.state = 'MOVE_TO_TARGET'
         elif self.state == 'MOVE_TO_TARGET':
-            if self.pos() == self.target:
+            if self.reached_target():
                 self.state = 'IDLE' if not self.ores else 'COLLECT_ORES'
             else:
                 if self.move_towards(self.target) or self.move_in_dir(Vec2D.random_grid_dir()):
@@ -75,6 +79,7 @@ class Transporter(Robot):
                 return
             n_transporters, ores = data
             if random.random() < 1 / max(n_transporters, 1):
+                # TODO: make communication and agree on who takes what
                 self.ores = list(ores)
                 self.failed_collect_attempts = 0
                 self.state = 'COLLECT_ORES'
