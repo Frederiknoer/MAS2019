@@ -8,7 +8,7 @@ TRANSPORTER = "TRANSPORTER"
 
 
 class Ore(Agent):
-    color = (.1, .1, 0)
+    color = (.25, .25, 0)
     group_ids = {ORE}
 
     def initialize(self):
