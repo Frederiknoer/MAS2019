@@ -18,21 +18,27 @@ def create_world(mp: MasParams):
         for y in range(mp.G):
             positions.append(Vec2D(x, y))
     base_positions = random.sample(positions, mp.N)
+    if mp.M == 1:  # cooperation
+        company_ids = [0] * mp.N
+    else:  # competitive
+        company_ids = list(range(mp.N))
 
-    for base_pos in base_positions:
-        base = Base(mp)
+    for base_pos, comp_id in zip(base_positions, company_ids):
+        base = Base(mp, comp_id)
         world.add_agent(base, base_pos)
 
         for _ in range(mp.X):
-            world.add_agent(Explorer(base, mp), pos=base_pos)
+            world.add_agent(Explorer(base, mp, comp_id), pos=base_pos)
         for _ in range(mp.Y):
-            world.add_agent(Transporter(base, mp), pos=base_pos)
+            world.add_agent(Transporter(base, mp, comp_id), pos=base_pos)
 
     return world
 
 
 def main():
     mp = MasParams()
+    mp.N = 3
+    mp.M = 0
     world = create_world(mp)
     vis = Visualizer(world, scale=3, target_speed=15)
     vis.start()

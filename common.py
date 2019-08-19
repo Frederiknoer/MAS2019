@@ -2,6 +2,7 @@ from pygridmas import Agent, Colors
 from masparams import MasParams
 
 BLOCK = "BLOCK"
+COMPANY = "COMPANY"
 BASE = "BASE"
 ORE = "ORE"
 EXPLORER = "EXPLORER"
@@ -19,23 +20,20 @@ class Ore(Agent):
 class Base(Agent):
     color = Colors.BLUE
     group_ids = {BASE}
+    cargo = 0
 
-    def __init__(self, mp: MasParams):
+    def __init__(self, mp: MasParams, comp_id):
         super().__init__()
         self.mp = mp
-
-
-    def initialize(self):
-        self.n_of_ores = 0
+        self.company_id = comp_id
+        self.group_ids.add(BASE + str(comp_id))
+        self.group_ids.add(COMPANY + str(comp_id))
 
     def step(self):
-        if self.n_of_ores >= self.mp.C:
-            self.emit_event((self.mp.I)//2, "BASE_FULL")
-        print(self.n_of_ores)
-
+        if self.cargo >= self.mp.C:
+            self.emit_event(self.mp.I // 2, "BASE_FULL", None, COMPANY + str(self.company_id))
 
     def receive_event(self, event_type, data):
         if event_type == "ORE_DELIVERY":
-            self.n_of_ores += data
-
-
+            self.cargo = min(self.cargo + data, self.mp.C)
+            print(self.cargo)

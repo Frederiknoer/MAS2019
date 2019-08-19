@@ -20,6 +20,7 @@ class Explorer(Robot):
 
     def initialize(self):
         self.target = self.base.pos()
+        self.group_ids.add(EXPLORER + str(self.company_id))
 
     def step(self):
         super().before_step()
@@ -30,7 +31,7 @@ class Explorer(Robot):
                 if self.at_base():
                     self.dir = Vec2D.random_dir()
                 if self.ore_data:
-                    transporters = self.box_scan(self.mp.P // 2, TRANSPORTER)
+                    transporters = self.box_scan(self.mp.P // 2, TRANSPORTER + str(self.company_id))
                     self.consume_energy(self.mp.P)
                     self.ore_data = (len(transporters), self.ore_data[1])
                     self.state = "EMIT_EVENT_ORE_POS"
@@ -80,7 +81,7 @@ class Explorer(Robot):
 
         elif self.state == "EMIT_EVENT_ORE_POS":
             self.color = Colors.WHITE
-            self.emit_event(self.mp.I // 2, "ORE_POSITIONS", self.ore_data, TRANSPORTER)
+            self.emit_event(self.mp.I // 2, "ORE_POSITIONS", self.ore_data, TRANSPORTER + str(self.company_id))
             self.consume_energy(1)
             self.ore_data = None
             self.set_new_random_rel_target()

@@ -13,12 +13,22 @@ class Transporter(Robot):
     cargo = 0
     failed_collect_attempts = 0
 
+    def initialize(self):
+        self.group_ids.add(TRANSPORTER + str(self.company_id))
+
+    def full(self):
+        return self.cargo >= self.mp.W
+
     def step(self):
         super().before_step()
 
         if self.at_base() and self.cargo:
             self.emit_event(0, "ORE_DELIVERY", self.cargo, BASE)
             self.cargo = 0
+
+        if self.full():
+            self.state = "MOVE_TO_TARGET"
+            self.target = self.base.pos()
 
         if self.state == 'IDLE':
             # Look for explorers and follow one of the nearest ones.

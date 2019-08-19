@@ -1,6 +1,6 @@
 from pygridmas import Agent, Colors, Vec2D
 from masparams import MasParams
-from common import BLOCK, Base
+from common import BLOCK, COMPANY, Base
 
 
 class Robot(Agent):
@@ -8,12 +8,14 @@ class Robot(Agent):
     target: Vec2D = None
     group_collision_ids = {BLOCK}
 
-    def __init__(self, base: Base, mp: MasParams):
+    def __init__(self, base: Base, mp: MasParams, comp_id):
         super().__init__()
         self.mp = mp
         self.energy = mp.E
         self.base = base
         self.base_full = False
+        self.company_id = comp_id
+        self.group_ids.add(COMPANY + str(comp_id))
 
     def at_base(self):
         return self.pos() == self.base.pos()
