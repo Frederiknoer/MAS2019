@@ -37,10 +37,10 @@ def create_world(mp: MasParams):
 
 def main():
     mp = MasParams()
-    mp.N = 3
+    mp.N = 1
     mp.M = 0
     world = create_world(mp)
-    vis = Visualizer(world, scale=3, target_speed=15)
+    vis = Visualizer(world, scale=3, target_speed=40)
     vis.start()
 
 

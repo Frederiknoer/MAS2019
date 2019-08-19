@@ -31,7 +31,7 @@ class Explorer(Robot):
                 if self.at_base():
                     self.dir = Vec2D.random_dir()
                 if self.ore_data:
-                    transporters = self.box_scan(self.mp.P // 2, TRANSPORTER + str(self.company_id))
+                    transporters = (self.box_scan(self.mp.P // 2, TRANSPORTER + str(self.company_id)))[:self.mp.S]
                     self.consume_energy(self.mp.P)
                     self.ore_data = (len(transporters), self.ore_data[1])
                     self.state = "EMIT_EVENT_ORE_POS"

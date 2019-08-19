@@ -36,4 +36,4 @@ class Base(Agent):
     def receive_event(self, event_type, data):
         if event_type == "ORE_DELIVERY":
             self.cargo = min(self.cargo + data, self.mp.C)
-            print(self.cargo)
+
