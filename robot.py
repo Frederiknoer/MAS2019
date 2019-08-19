@@ -13,6 +13,7 @@ class Robot(Agent):
         self.mp = mp
         self.energy = mp.E
         self.base = base
+        self.base_full = False
 
     def at_base(self):
         return self.pos() == self.base.pos()
@@ -42,3 +43,13 @@ class Robot(Agent):
                 self.group_ids.remove(BLOCK)
         else:
             self.group_ids.add(BLOCK)
+
+        if self.world.time >= self.mp.T:
+            self.target = self.base.pos()
+            if self.pos() == self.base.pos():
+                self.deactivate()
+
+        if self.base_full:
+            self.target = self.base.pos()
+            if self.pos() == self.base.pos():
+                self.deactivate()

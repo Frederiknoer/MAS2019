@@ -9,7 +9,7 @@ world = World(w=mp.G, h=mp.G, torus_enabled=True)
 base_pos = Vec2D(mp.G // 3, mp.G // 3)
 n_ores = round(mp.G ** 2 * mp.D)
 
-base = Base()
+base = Base(mp)
 world.add_agent(base, pos=base_pos)
 
 for _ in range(mp.X):
