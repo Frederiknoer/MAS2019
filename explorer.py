@@ -80,10 +80,14 @@ class Explorer(Robot):
 
         elif self.state == "EMIT_EVENT_ORE_POS":
             self.color = Colors.WHITE
-            self.emit_event(25, "ORE_POSITIONS", self.ore_data, TRANSPORTER)
+            self.emit_event(self.mp.I // 2, "ORE_POSITIONS", self.ore_data, TRANSPORTER)
             self.consume_energy(1)
             self.ore_data = None
             self.set_new_random_rel_target()
             self.state = "MOVE_TO_TARGET"
 
         super().after_step()
+
+    def receive_event(self, event_type, data):
+        if event_type == "BASE_FULL":
+            self.base_full = True

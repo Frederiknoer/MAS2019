@@ -83,3 +83,5 @@ class Transporter(Robot):
                 self.ores = list(ores)
                 self.failed_collect_attempts = 0
                 self.state = 'COLLECT_ORES'
+        elif event_type == "BASE_FULL":
+            self.base_full = True

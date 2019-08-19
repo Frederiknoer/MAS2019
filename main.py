@@ -20,7 +20,7 @@ def create_world(mp: MasParams):
     base_positions = random.sample(positions, mp.N)
 
     for base_pos in base_positions:
-        base = Base()
+        base = Base(mp)
         world.add_agent(base, base_pos)
 
         for _ in range(mp.X):
