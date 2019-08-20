@@ -87,7 +87,10 @@ class Transporter(Robot):
         if event_type == "ORE_POSITIONS":
             if self.ores:
                 return
-            n_transporters, ores = data
+            if len(data) >= self.mp.S:
+                n_transporters, ores = data[:self.mp.S]
+            else:
+                n_transporters, ores = data
             if random.random() < 1 / max(n_transporters, 1):
                 # TODO: make communication and agree on who takes what
                 self.ores = list(ores)
