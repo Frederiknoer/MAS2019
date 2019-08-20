@@ -1,7 +1,8 @@
 from pygridmas import World, Vec2D, Visualizer
 from explorer import Explorer
 from transporter import Transporter
-from common import Base, Ore
+from common import Ore
+from base import Base
 from masparams import MasParams
 import random
 
@@ -37,8 +38,6 @@ def create_world(mp: MasParams):
 
 def main():
     mp = MasParams()
-    mp.N = 1
-    mp.M = 0
     world = create_world(mp)
     vis = Visualizer(world, scale=3, target_speed=40)
     vis.start()

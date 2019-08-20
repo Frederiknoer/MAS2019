@@ -1,12 +1,22 @@
-from pygridmas import Agent, Colors
+from pygridmas import Agent
 from masparams import MasParams
 
+# group id names
 BLOCK = "BLOCK"
 COMPANY = "COMPANY"
 BASE = "BASE"
 ORE = "ORE"
 EXPLORER = "EXPLORER"
 TRANSPORTER = "TRANSPORTER"
+BROKER = "BROKER"
+
+# communication names
+BASE_FULL = "BASE_FULL"
+ORE_DELIVERY = "ORE_DELIVERY"
+ORE_POSITIONS = "ORE_POSITIONS"
+TRANSPORTER_IDLE = "TRANSPORTER_IDLE"
+TRANSPORTER_REQUEST = "TRANSPORTER_REQUEST"
+TRANSPORTER_RESPONSE = "TRANSPORTER_RESPONSE"
 
 
 class Ore(Agent):
@@ -17,23 +27,16 @@ class Ore(Agent):
         self.deactivate()
 
 
-class Base(Agent):
-    color = Colors.BLUE
-    group_ids = {BASE}
-    cargo = 0
-
-    def __init__(self, mp: MasParams, comp_id):
+class CompanyEntity(Agent):
+    def __init__(self, mp: MasParams, company_id):
         super().__init__()
         self.mp = mp
-        self.company_id = comp_id
-        self.group_ids.add(BASE + str(comp_id))
-        self.group_ids.add(COMPANY + str(comp_id))
+        self.energy = mp.E
+        self.company_id = company_id
 
-    def step(self):
-        if self.cargo >= self.mp.C:
-            self.emit_event(self.mp.I // 2, "BASE_FULL", None, COMPANY + str(self.company_id))
+    def consume_energy(self, energy_consumption):
+        self.energy -= energy_consumption
 
-    def receive_event(self, event_type, data):
-        if event_type == "ORE_DELIVERY":
-            self.cargo = min(self.cargo + data, self.mp.C)
-
+    def initialize(self):
+        self.group_ids.add(self.idx)
+        self.group_ids.add('{}{}'.format(COMPANY, self.company_id))

@@ -14,7 +14,7 @@ class MasParams:
     C = math.inf  # Base capacity (n ores)
     P = 7  # Initial perception scope (P <= G/20 and P <= I)
     I = 21  # Communication scope  (I <= G/5)
-    W = 10  # Transporter capacity
+    W = 20  # Transporter capacity
     E = 500  # Robot energy capacity
-    S = 20  # memory size of each robot (S <= X+Y)
+    S = 10  # memory size of each robot (S <= X+Y)
     Q = 2  # Cost of motion action

@@ -1,23 +1,32 @@
 import random
 
 from pygridmas import Colors, Vec2D
-from common import TRANSPORTER, EXPLORER, BASE
+from common import TRANSPORTER, BASE, BASE_FULL, COMPANY
+from common import TRANSPORTER_IDLE, TRANSPORTER_REQUEST, TRANSPORTER_RESPONSE, ORE_POSITIONS
 from robot import Robot
+
+IDLE = 'IDLE'
+COLLECT_ORES = 'COLLECT_ORES'
+BROKER_RESPONDING = 'BROKER_RESPONDING'
 
 
 class Transporter(Robot):
     color = Colors.RED
     group_ids = {TRANSPORTER}
-    state = 'IDLE'
+    state = IDLE
     ores: list = None
     cargo = 0
-    failed_collect_attempts = 0
+    broker_id = None
+    counter = 0
 
     def initialize(self):
-        self.group_ids.add(TRANSPORTER + str(self.company_id))
+        super().initialize()
+        self.group_ids.add('{}{}'.format(TRANSPORTER, self.company_id))
+        self.group_ids.add(self.idx)
 
     def full(self):
-        return self.cargo >= self.mp.W
+        assert(self.cargo <= self.mp.W)
+        return self.cargo == self.mp.W
 
     def step(self):
         super().before_step()
@@ -25,54 +34,34 @@ class Transporter(Robot):
         if self.at_base() and self.cargo:
             self.emit_event(0, "ORE_DELIVERY", self.cargo, BASE)
             self.cargo = 0
-
-        if self.full():
-            self.state = "MOVE_TO_TARGET"
-            self.target = self.base.pos()
-
-        if self.state == 'IDLE':
-            # Look for explorers and follow one of the nearest ones.
-            # If there are none, go to the base.
-            agents = self.box_scan(self.mp.P // 2)
-            self.energy -= self.mp.P
-            explorers = [a for a in agents if EXPLORER in a.group_ids]
-            transporters = [a for a in agents if TRANSPORTER in a.group_ids]
-            if explorers:
-                self.target = random.choice(explorers).pos()
-                if transporters:
-                    if random.random() < 1 - 1 / (len(transporters) + 1):
-                        v = random.choice(transporters).vec_to(self.pos())
-                        v = v.normalize() if not v.is_zero_vec() else Vec2D.random_dir()
-                        v *= 10
-                        self.target = self.world.torus(self.pos() + v.round())
+        elif self.full() or self.energy_low() or self.base_full:
+            self.reactive_move_towards(self.base.pos())
+        elif self.state == IDLE:
+            p_move_towards_base = 0.2 if not self.at_base() else 0
+            if random.random() < p_move_towards_base:
+                self.reactive_move_towards(self.base.pos())
             else:
-                self.target = self.base.pos()
-            self.target = self.base.pos()  # TODO: temp
-            self.state = 'MOVE_TO_TARGET'
-        elif self.state == 'MOVE_TO_TARGET':
-            if self.reached_target():
-                self.state = 'IDLE' if not self.ores else 'COLLECT_ORES'
-            else:
-                if self.move_towards(self.target) or self.move_in_dir(Vec2D.random_grid_dir()):
-                    self.energy -= self.mp.Q
-        elif self.state == 'COLLECT_ORES':
+                self.emit_event(self.mp.I // 2, TRANSPORTER_IDLE, None, '{}{}'.format(COMPANY, self.company_id))
+                self.consume_energy(1)
+        elif self.state == BROKER_RESPONDING:
+            if self.counter == 0:
+                self.emit_event(self.mp.I // 2, TRANSPORTER_RESPONSE, (self.pos(), self.idx), self.broker_id)
+                self.consume_energy(1)
+            elif self.counter == 2:
+                #  didn't get it  :/
+                self.state = IDLE
+            self.counter += 1
+        elif self.state == COLLECT_ORES:
             ore_idx, ore_pos = self.ores[0]
             if ore_pos == self.pos():
                 self.ores.pop(0)
                 if self.try_collect_ore(ore_idx):
                     self.cargo += 1
-                else:
-                    self.failed_collect_attempts += 1
-                    if self.failed_collect_attempts >= 2:  # two failed attempts in a row
-                        self.ores = []
-                if len(self.ores) == 0:
-                    self.state = 'IDLE'
-                self.energy -= 1
+                self.consume_energy(1)
+                if not self.ores:
+                    self.state = IDLE
             else:
-                if self.move_towards(ore_pos) or self.move_in_dir(Vec2D.random_grid_dir()):
-                    self.energy -= 1
-        else:
-            assert False, "shouldn't reach unknown state: '{}'".format(self.state)
+                self.reactive_move_towards(ore_pos)
 
         super().after_step()
 
@@ -84,17 +73,13 @@ class Transporter(Robot):
             return False
 
     def receive_event(self, event_type, data):
-        if event_type == "ORE_POSITIONS":
-            if self.ores:
-                return
-            if len(data) >= self.mp.S:
-                n_transporters, ores = data[:self.mp.S]
-            else:
-                n_transporters, ores = data
-            if random.random() < 1 / max(n_transporters, 1):
-                # TODO: make communication and agree on who takes what
-                self.ores = list(ores)
-                self.failed_collect_attempts = 0
-                self.state = 'COLLECT_ORES'
-        elif event_type == "BASE_FULL":
+        if event_type == ORE_POSITIONS:
+            ores, ttl = data
+            self.ores = list(ores)
+            self.state = COLLECT_ORES
+        elif event_type == TRANSPORTER_REQUEST and self.state == IDLE:
+            self.state = BROKER_RESPONDING
+            self.counter = 0
+            self.broker_id = data
+        elif event_type == BASE_FULL:
             self.base_full = True
