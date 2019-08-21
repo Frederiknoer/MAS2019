@@ -2,6 +2,8 @@ from pygridmas import Colors, Vec2D
 from masparams import MasParams
 from common import BLOCK, CompanyEntity
 from base import Base
+from typing import List
+import math
 
 
 class Robot(CompanyEntity):
@@ -9,14 +11,24 @@ class Robot(CompanyEntity):
     target: Vec2D = None
     group_collision_ids = {BLOCK}
 
-    def __init__(self, base: Base, mp: MasParams, company_id):
+    def __init__(self, bases: List[Base], mp: MasParams, company_id):
         super().__init__(mp, company_id)
         self.energy = mp.E
-        self.base = base
+        self.bases = bases
         self.base_full = False
 
     def at_base(self):
-        return self.pos() == self.base.pos()
+        return self.pos() == self.closest_base().pos()
+
+    def closest_base(self):
+        mi = math.inf
+        closest_base = None
+        for base in self.bases:
+            dist = self.vec_to(base.pos()).inf_magnitude()
+            if dist < mi:
+                closest_base = base
+                mi = dist
+        return closest_base
 
     def reached_target(self):
         return self.target == self.pos()
@@ -35,7 +47,7 @@ class Robot(CompanyEntity):
 
     def energy_low(self):
         # TODO: possibly remove the self.mp.P and make sure not to use that energy
-        dist_to_base = self.vec_to(self.base.pos()).inf_magnitude()
+        dist_to_base = self.vec_to(self.closest_base().pos()).inf_magnitude()
         margin = self.mp.P + self.mp.Q * 5
         return self.energy <= dist_to_base * self.mp.Q + margin
 
@@ -50,14 +62,9 @@ class Robot(CompanyEntity):
         else:
             self.group_ids.add(BLOCK)
 
-        if self.world.time >= self.mp.T:
-            self.target = self.base.pos()
-            if self.pos() == self.base.pos():
-                self.deactivate()
-
-        if self.base_full:
-            self.target = self.base.pos()
-            if self.pos() == self.base.pos():
+        if self.world.time >= self.mp.T or self.base_full:
+            self.target = self.closest_base().pos()
+            if self.at_base():
                 self.deactivate()
 
         if self.energy <= 0:

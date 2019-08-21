@@ -2,7 +2,7 @@ import random
 
 from pygridmas import Colors, Vec2D
 from common import TRANSPORTER, BASE, BASE_FULL, COMPANY
-from common import TRANSPORTER_IDLE, TRANSPORTER_REQUEST, TRANSPORTER_RESPONSE, ORE_POSITIONS
+from common import TRANSPORTER_IDLE, TRANSPORTER_REQUEST, TRANSPORTER_RESPONSE, ORE_POSITIONS, ORE_DELIVERY
 from robot import Robot
 
 IDLE = 'IDLE'
@@ -32,14 +32,14 @@ class Transporter(Robot):
         super().before_step()
 
         if self.at_base() and self.cargo:
-            self.emit_event(0, "ORE_DELIVERY", self.cargo, BASE)
+            self.emit_event(0, ORE_DELIVERY, self.cargo, BASE)
             self.cargo = 0
         elif self.full() or self.energy_low() or self.base_full:
-            self.reactive_move_towards(self.base.pos())
+            self.reactive_move_towards(self.closest_base().pos())
         elif self.state == IDLE:
-            p_move_towards_base = 0.2 if not self.at_base() else 0
+            p_move_towards_base = 0.8
             if random.random() < p_move_towards_base:
-                self.reactive_move_towards(self.base.pos())
+                self.reactive_move_towards(self.closest_base().pos())
             else:
                 self.emit_event(self.mp.I // 2, TRANSPORTER_IDLE, None, '{}{}'.format(COMPANY, self.company_id))
                 self.consume_energy(1)
@@ -74,7 +74,7 @@ class Transporter(Robot):
 
     def receive_event(self, event_type, data):
         if event_type == ORE_POSITIONS:
-            ores, ttl = data
+            ores = data[0]
             self.ores = list(ores)
             self.state = COLLECT_ORES
         elif event_type == TRANSPORTER_REQUEST and self.state == IDLE:
