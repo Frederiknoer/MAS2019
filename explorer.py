@@ -1,5 +1,3 @@
-import random
-
 from pygridmas import Colors, Vec2D
 from robot import Robot
 from broker import Broker
@@ -28,15 +26,13 @@ class Explorer(Robot):
         self.broker = Broker(self)
         self.ores = []
 
-    def set_new_random_rel_target(self):
-        v = self.dir
-        v = v / self.dir.inf_magnitude() * self.mp.P
-        self.target = self.world.torus(self.pos() + v.round())
+    def set_new_dir_target(self):
+        self.target = self.world.torus(self.pos() + (self.dir * self.mp.P).round())
 
     def handle_broker_status(self, success: bool):
         self.state = MOVE_TO_TARGET
         if success:
-            self.set_new_random_rel_target()
+            self.set_new_dir_target()
             self.ore_data = None
             self.ores = []
         else:
@@ -45,7 +41,7 @@ class Explorer(Robot):
             if dir.inf_magnitude() <= self.mp.I:
                 self.target = self.closest_base().pos()
             else:
-                self.target = self.world.torus(self.pos() + (dir.normalize() * self.mp.I).round())
+                self.target = self.world.torus(self.pos() + (dir.inf_normalize() * self.mp.I).round())
 
     def prepare_ore_data(self):
         ttl = 10
@@ -65,7 +61,7 @@ class Explorer(Robot):
         elif self.state == MOVE_TO_TARGET:
             if self.reached_target():
                 if self.at_base():
-                    self.dir = Vec2D.random_dir()
+                    self.dir = Vec2D.random_dir().inf_normalize()
                 if self.ore_data:
                     self.state = ATTEMPT_DELEGATION
                 else:
@@ -94,7 +90,7 @@ class Explorer(Robot):
                 rel_r_pos = [self.vec_to(r.pos()) for r in robots]
                 cog_dir = sum(rel_r_pos, Vec2D())
                 cog = self.pos() + cog_dir
-                cog_dir = cog_dir.normalize() if not cog_dir.is_zero_vec() else Vec2D.random_dir()
+                cog_dir = cog_dir.inf_normalize() if not cog_dir.is_zero_vec() else Vec2D.random_dir().inf_normalize()
                 self.target = self.world.torus((cog - cog_dir * self.mp.P).round())
                 self.dir = -cog_dir
                 self.state = MOVE_TO_TARGET
@@ -102,11 +98,11 @@ class Explorer(Robot):
                 self.counter = 0
                 rel_ore_pos = [self.vec_to(o[1]) for o in ores]
                 cog_dir = sum(rel_ore_pos, Vec2D())
-                cog_dir = cog_dir.normalize() if not cog_dir.is_zero_vec() else Vec2D.random_dir()
+                cog_dir = cog_dir.inf_normalize() if not cog_dir.is_zero_vec() else Vec2D.random_dir().inf_normalize()
                 self.target = self.world.torus(self.pos() + (cog_dir * self.mp.P).round())
                 self.state = MOVE_TO_TARGET
             else:
-                self.set_new_random_rel_target()
+                self.set_new_dir_target()
                 self.state = MOVE_TO_TARGET
         self.broker.nearby_idle_transporters = 0
         super().after_step()

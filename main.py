@@ -8,7 +8,7 @@ import random
 import math
 
 
-def create_world(mp: MasParams):
+def create_world(mp: MasParams, World=World, Base=Base, Transporter=Transporter, Explorer=Explorer, Ore=Ore):
     world = World(w=mp.G, h=mp.G, torus_enabled=True)
 
     n_ores = round(mp.G ** 2 * mp.D)
@@ -44,6 +44,7 @@ def create_world(mp: MasParams):
 def main():
     mp = MasParams()
     mp.T = math.inf
+    mp.M = 1
     world = create_world(mp)
     vis = Visualizer(world, scale=3, target_speed=40, start_paused=True)
     vis.start()

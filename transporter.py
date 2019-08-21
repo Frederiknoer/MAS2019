@@ -1,8 +1,8 @@
 import random
 
-from pygridmas import Colors, Vec2D
-from common import TRANSPORTER, BASE, BASE_FULL, COMPANY
-from common import TRANSPORTER_IDLE, TRANSPORTER_REQUEST, TRANSPORTER_RESPONSE, ORE_POSITIONS, ORE_DELIVERY
+from pygridmas import Colors
+from common import TRANSPORTER, BASE, BASE_FULL
+from common import TRANSPORTER_REQUEST, TRANSPORTER_RESPONSE, ORE_POSITIONS, ORE_DELIVERY
 from robot import Robot
 
 IDLE = 'IDLE'
@@ -25,7 +25,7 @@ class Transporter(Robot):
         self.group_ids.add(self.idx)
 
     def full(self):
-        assert(self.cargo <= self.mp.W)
+        assert (self.cargo <= self.mp.W)
         return self.cargo == self.mp.W
 
     def step(self):
@@ -37,12 +37,9 @@ class Transporter(Robot):
         elif self.full() or self.energy_low() or self.base_full:
             self.reactive_move_towards(self.closest_base().pos())
         elif self.state == IDLE:
-            p_move_towards_base = 0.8
-            if random.random() < p_move_towards_base:
+            if random.random() < self.counter * 0.005:
                 self.reactive_move_towards(self.closest_base().pos())
-            else:
-                self.emit_event(self.mp.I // 2, TRANSPORTER_IDLE, None, '{}{}'.format(COMPANY, self.company_id))
-                self.consume_energy(1)
+            self.counter += 1
         elif self.state == BROKER_RESPONDING:
             if self.counter == 0:
                 self.emit_event(self.mp.I // 2, TRANSPORTER_RESPONSE, (self.pos(), self.idx), self.broker_id)
@@ -50,6 +47,7 @@ class Transporter(Robot):
             elif self.counter == 2:
                 #  didn't get it  :/
                 self.state = IDLE
+                self.counter = 0
             self.counter += 1
         elif self.state == COLLECT_ORES:
             ore_idx, ore_pos = self.ores[0]
@@ -60,6 +58,7 @@ class Transporter(Robot):
                 self.consume_energy(1)
                 if not self.ores:
                     self.state = IDLE
+                    self.counter = 0
             else:
                 self.reactive_move_towards(ore_pos)
 

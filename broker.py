@@ -37,6 +37,7 @@ class Broker:
             self.ce.mp.I // 2, TRANSPORTER_REQUEST, self.ce.idx,
             '{}{}'.format(TRANSPORTER, self.ce.company_id)
         )
+        self.ce.consume_energy(1)
         self.nearby = []
         self.counter = 0
 
@@ -47,6 +48,7 @@ class Broker:
             self.ce.mp.I // 2, BROKER_REQUEST, (self.base_dist(), idxs),
             '{}{}'.format(COMPANY, self.ce.company_id)
         )
+        self.ce.consume_energy(1)
         self.nearby = []
         self.counter = 0
 
@@ -55,6 +57,7 @@ class Broker:
         if self.state == BROKER_RESPONDING:
             data = (self.base_dist(), self.ce.idx)
             self.ce.emit_event(self.ce.mp.I // 2, BROKER_RESPONSE, data, self.request_id)
+            self.ce.consume_energy(1)
             self.state = None
         elif self.state == TRANSPORTER_REQUESTING:
             self.counter += 1
@@ -63,6 +66,7 @@ class Broker:
                 if self.nearby:
                     self.nearby.sort()
                     self.ce.emit_event(self.ce.mp.I // 2, ORE_POSITIONS, self.ore_data, self.nearby[0][1])
+                    self.ce.consume_energy(1)
                     self.status_cb(True)
                 else:
                     if self.ce.at_base():
@@ -80,6 +84,7 @@ class Broker:
                 if self.nearby:
                     self.nearby.sort()
                     self.ce.emit_event(self.ce.mp.I // 2, ORE_POSITIONS, self.ore_data, self.nearby[0][1])
+                    self.ce.consume_energy(1)
                     self.status_cb(True)
                 else:
                     self.status_cb(False)

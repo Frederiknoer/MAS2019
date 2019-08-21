@@ -28,6 +28,8 @@ class Ore(Agent):
 
 
 class CompanyEntity(Agent):
+    energy_logger = None
+
     def __init__(self, mp: MasParams, company_id):
         super().__init__()
         self.mp = mp
@@ -36,6 +38,8 @@ class CompanyEntity(Agent):
 
     def consume_energy(self, energy_consumption):
         self.energy -= energy_consumption
+        if self.energy_logger:
+            self.energy_logger(energy_consumption)
 
     def initialize(self):
         self.group_ids.add(self.idx)
