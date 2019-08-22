@@ -27,6 +27,8 @@ class Explorer(Robot):
         self.ores = []
 
     def set_new_dir_target(self):
+        if self.mp.R:
+            self.dir = Vec2D.random_dir().inf_normalize()
         self.target = self.world.torus(self.pos() + (self.dir * self.mp.P).round())
 
     def handle_broker_status(self, success: bool):
@@ -49,15 +51,21 @@ class Explorer(Robot):
 
     def step(self):
         super().before_step()
-        self.color = Colors.GREEN
+        self.color = Colors.GREEN if self.company_id == 0 else Colors.CYAN
 
+        if self.at_base() and False:
+            self.dir = Vec2D.random_dir().inf_normalize()
+            self.set_new_dir_target()
+            if self.ores:
+                self.prepare_ore_data()
+                self.state = ATTEMPT_DELEGATION
         if self.energy_low() or self.base_full:
             self.reactive_move_towards(self.closest_base().pos())
-        elif self.broker.step():
-            self.color = Colors.WHITE
-            pass  # broker is active
         elif self.state == ATTEMPT_DELEGATION:
             self.broker.attempt_ore_data_delegation(self.ore_data, self.handle_broker_status)
+            self.state = MOVE_TO_TARGET
+        elif self.broker.step():
+            self.color = Colors.WHITE
         elif self.state == MOVE_TO_TARGET:
             if self.reached_target():
                 if self.at_base():
@@ -79,11 +87,10 @@ class Explorer(Robot):
             robots = explorers + transporters
 
             ores = [(o.idx, o.pos()) for o in ores]
-            ores = [o for o in ores if not o in self.ores]
+            ores = [o for o in ores if o not in self.ores]
             already_found_ores = bool(self.ores)
-            self.ores += ores
-            self.ores = self.ores[:self.mp.S]
-            if len(self.ores) >= self.mp.S or already_found_ores and self.counter > 10:
+            self.ores = (self.ores + ores)[:self.mp.S]
+            if len(self.ores) >= self.mp.S or already_found_ores and self.counter >= 5:
                 self.prepare_ore_data()
                 self.state = ATTEMPT_DELEGATION
             elif robots:
@@ -104,6 +111,7 @@ class Explorer(Robot):
             else:
                 self.set_new_dir_target()
                 self.state = MOVE_TO_TARGET
+            self.counter += 1
         self.broker.nearby_idle_transporters = 0
         super().after_step()
 
@@ -112,6 +120,8 @@ class Explorer(Robot):
         if event_type == ORE_POSITIONS:
             ores, ttl, idxs = data
             idxs.append(self.idx)
-            self.ore_data = ores, ttl - 1, idxs
+            self.ores += [o for o in ores if o not in self.ores]
+            self.ore_data = self.ores, ttl - 1, idxs
+            self.state = ATTEMPT_DELEGATION
         if event_type == BASE_FULL:
             self.base_full = True

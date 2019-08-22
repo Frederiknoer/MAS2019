@@ -23,6 +23,7 @@ class Transporter(Robot):
         super().initialize()
         self.group_ids.add('{}{}'.format(TRANSPORTER, self.company_id))
         self.group_ids.add(self.idx)
+        self.ores = []
 
     def full(self):
         assert (self.cargo <= self.mp.W)
@@ -74,11 +75,13 @@ class Transporter(Robot):
     def receive_event(self, event_type, data):
         if event_type == ORE_POSITIONS:
             ores = data[0]
-            self.ores = list(ores)
+            self.ores += list(ores)
             self.state = COLLECT_ORES
-        elif event_type == TRANSPORTER_REQUEST and self.state == IDLE:
-            self.state = BROKER_RESPONDING
-            self.counter = 0
-            self.broker_id = data
+        elif event_type == TRANSPORTER_REQUEST:
+            broker_id, N = data
+            if self.state == IDLE or len(self.ores) + N <= self.mp.S:
+                self.state = BROKER_RESPONDING
+                self.counter = 0
+                self.broker_id = broker_id
         elif event_type == BASE_FULL:
             self.base_full = True

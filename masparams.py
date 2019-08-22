@@ -18,3 +18,7 @@ class MasParams:
     E = 500  # Robot energy capacity
     S = 10  # memory size of each robot (S <= X+Y)
     Q = 2  # Cost of motion action
+
+    #  own defined parameters
+    K = 1  # Broker enabled
+    R = 0  # Random explorer direction every time

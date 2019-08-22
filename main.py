@@ -45,6 +45,7 @@ def main():
     mp = MasParams()
     mp.T = math.inf
     mp.M = 1
+    mp.I = 39
     world = create_world(mp)
     vis = Visualizer(world, scale=3, target_speed=40, start_paused=True)
     vis.start()

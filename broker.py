@@ -33,8 +33,9 @@ class Broker:
 
     def request_transporter(self):
         self.state = TRANSPORTER_REQUESTING
+        data = (self.ce.idx, len(self.ore_data[0]))
         self.ce.emit_event(
-            self.ce.mp.I // 2, TRANSPORTER_REQUEST, self.ce.idx,
+            self.ce.mp.I // 2, TRANSPORTER_REQUEST, data,
             '{}{}'.format(TRANSPORTER, self.ce.company_id)
         )
         self.ce.consume_energy(1)
@@ -44,8 +45,9 @@ class Broker:
     def request_broker(self):
         self.state = BROKER_REQUESTING
         _, _, idxs = self.ore_data
+        data = (self.base_dist(), idxs, len(self.ore_data[0]))
         self.ce.emit_event(
-            self.ce.mp.I // 2, BROKER_REQUEST, (self.base_dist(), idxs),
+            self.ce.mp.I // 2, BROKER_REQUEST, data,
             '{}{}'.format(COMPANY, self.ce.company_id)
         )
         self.ce.consume_energy(1)
@@ -73,7 +75,7 @@ class Broker:
                         self.request_transporter()
                     else:
                         ttl = self.ore_data[1]
-                        if ttl > 0:
+                        if ttl > 0 and self.ce.mp.K == 1:
                             self.request_broker()
                         else:
                             self.status_cb(False)
@@ -101,7 +103,7 @@ class Broker:
             # can only handle one broker state at a time
             return
         elif event_type == BROKER_REQUEST:
-            dist, idxs = data
-            if self.ce.idx not in idxs and self.base_dist() < dist:
+            dist, idxs, N = data
+            if self.ce.idx not in idxs and self.base_dist() < dist and len(self.ce.ores) + N <= self.ce.mp.S:
                 self.state = BROKER_RESPONDING
                 self.request_id = idxs[-1]
