@@ -39,7 +39,7 @@ class Explorer(Robot):
             self.set_new_dir_target()
             self.ore_data = None
             self.ores = []
-            self.old_ores = list(self.ores)
+            self.old_ores = (self.ores + self.old_ores)[:self.mp.S]
         else:
             base = self.closest_base()
             dir = self.vec_to(base.pos())
@@ -84,9 +84,9 @@ class Explorer(Robot):
 
             ores = [(o.idx, o.pos()) for o in ores]
             ores = [o for o in ores if o not in self.ores and o not in self.old_ores]
-            self.old_ores = self.old_ores[:self.mp.S - len(self.ores)]
             already_found_ores = bool(self.ores)
             self.ores = (self.ores + ores)[:self.mp.S]
+            self.old_ores = self.old_ores[:self.mp.S - len(self.ores)]
             if len(self.ores) >= self.mp.S or already_found_ores and self.counter >= 5:
                 self.prepare_ore_data()
                 self.state = ATTEMPT_DELEGATION
@@ -118,8 +118,9 @@ class Explorer(Robot):
             self.color = (0.5, 1, 0.5)
             ores, ttl, idxs = data
             idxs.append(self.idx)
-            self.ores += [o for o in ores if o not in self.ores]
+            self.ores += [o for o in ores if o not in self.ores and o not in self.old_ores]
             self.ore_data = self.ores, ttl - 1, idxs
+            self.old_ores = self.old_ores[:self.mp.S - len(self.ores)]
             self.state = ATTEMPT_DELEGATION
         if event_type == BASE_FULL:
             self.base_full = True

@@ -108,7 +108,7 @@ class Broker:
             return
         elif event_type == BROKER_REQUEST:
             dist, idxs, ores = data
-            new_ores = [o for o in ores if o not in self.ce.ores]
+            new_ores = [o for o in ores if o not in self.ce.ores and o not in self.ce.old_ores]
             self.ce.color = (0.4, 0.6, 0.4)
             if self.ce.idx not in idxs and self.base_dist() < dist and len(self.ce.ores) + len(new_ores) <= self.ce.mp.S:
                 self.state = BROKER_RESPONDING
