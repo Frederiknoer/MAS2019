@@ -22,3 +22,18 @@ class MasParams:
     #  own defined parameters
     K = 1  # Broker enabled
     R = 0  # Random explorer direction every time
+
+
+class DefaultParams(MasParams):
+    C = 175
+    D = 0.04
+    E = 960
+    G = 225
+    I = 33
+    P = 7
+    Q = 1.4
+    S = 11
+    T = 77500
+    W = 7
+    X = 6
+    Y = 7

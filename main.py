@@ -3,7 +3,7 @@ from explorer import Explorer
 from transporter import Transporter
 from common import Ore
 from base import Base
-from masparams import MasParams
+from masparams import MasParams, DefaultParams
 import random
 import math
 
@@ -16,7 +16,7 @@ class BaseArea(Agent):
 
 
 def create_world(mp: MasParams, World=World, Base=Base, Transporter=Transporter, Explorer=Explorer, Ore=Ore):
-    world = World(w=mp.G, h=mp.G, torus_enabled=True)
+    world = World(w=mp.G, h=mp.G, torus_enabled=mp.torus)
 
     n_ores = round(mp.G ** 2 * mp.D)
     for _ in range(n_ores):
@@ -60,12 +60,15 @@ def create_world(mp: MasParams, World=World, Base=Base, Transporter=Transporter,
 
 
 def main():
-    mp = MasParams()
-    mp.T = math.inf
+    zoom = True
+    mp = DefaultParams()
     mp.N = 1
-    mp.G = 50
+    scale = 3
+    if zoom:
+        mp.G = 50
+        scale = 10
     world = create_world(mp)
-    vis = Visualizer(world, scale=10, target_speed=40, start_paused=True)
+    vis = Visualizer(world, scale=scale, target_speed=40, start_paused=True)
     vis.start()
 
 
