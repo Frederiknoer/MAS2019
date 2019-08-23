@@ -6,6 +6,7 @@ from explorer import Explorer
 from pygridmas.examples.log import AgentCountLogger
 import numpy as np
 import sys
+import math
 
 
 class EnergyLogger:

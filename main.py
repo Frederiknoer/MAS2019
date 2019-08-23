@@ -1,4 +1,4 @@
-from pygridmas import World, Vec2D, Visualizer
+from pygridmas import World, Agent, Vec2D, Visualizer, Colors
 from explorer import Explorer
 from transporter import Transporter
 from common import Ore
@@ -6,6 +6,13 @@ from base import Base
 from masparams import MasParams
 import random
 import math
+
+
+class BaseArea(Agent):
+    color = (0.5, 0.5, 0.5)
+
+    def initialize(self):
+        self.deactivate()
 
 
 def create_world(mp: MasParams, World=World, Base=Base, Transporter=Transporter, Explorer=Explorer, Ore=Ore):
@@ -19,7 +26,16 @@ def create_world(mp: MasParams, World=World, Base=Base, Transporter=Transporter,
     for x in range(mp.G):
         for y in range(mp.G):
             positions.append(Vec2D(x, y))
-    base_positions = random.sample(positions, mp.N)
+    if mp.N == 1:
+        base_positions = [Vec2D(mp.G // 2, mp.G // 2)]
+    else:
+        base_positions = random.sample(positions, mp.N)
+    for base_pos in base_positions:
+        for dx in range(-1, 2):
+            for dy in range(-1, 2):
+                d_pos = Vec2D(dx, dy)
+                world.add_agent(BaseArea(), world.torus(base_pos + d_pos))
+
     if mp.M == 1:  # cooperation
         company_ids = [0] * mp.N
     else:  # competitive
@@ -29,6 +45,8 @@ def create_world(mp: MasParams, World=World, Base=Base, Transporter=Transporter,
         base = Base(mp, comp_id)
         world.add_agent(base, base_pos)
         bases.append(base)
+
+
 
     for base_pos, comp_id in zip(base_positions, company_ids):
         _bases = bases if mp.M == 1 else [bases[comp_id]]
@@ -44,12 +62,32 @@ def create_world(mp: MasParams, World=World, Base=Base, Transporter=Transporter,
 def main():
     mp = MasParams()
     mp.T = math.inf
-    mp.M = 1
-    mp.I = 39
+    mp.N = 1
+    mp.G = 50
     world = create_world(mp)
-    vis = Visualizer(world, scale=3, target_speed=40, start_paused=True)
+    vis = Visualizer(world, scale=10, target_speed=40, start_paused=True)
     vis.start()
 
 
 if __name__ == '__main__':
     main()
+
+
+"""
+Transporter:
+    Default         : RED
+    Can receive ores: Orange
+    Can not --||--  : Pale red
+    Received ores   : Bright red
+    
+Explorer
+    Default         : Green
+    Scan            : Yellow
+    Request TP      : White
+    Request Broker  : Blue
+    Emit ore pos    : Magenta
+    Can receive ores: Cyan
+    Can not --||--  : Pale green
+    Received ores   : Bright green
+    
+"""

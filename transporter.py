@@ -32,6 +32,8 @@ class Transporter(Robot):
     def step(self):
         super().before_step()
 
+        self.color = Colors.RED
+
         if self.at_base() and self.cargo:
             self.emit_event(0, ORE_DELIVERY, self.cargo, BASE)
             self.cargo = 0
@@ -74,14 +76,18 @@ class Transporter(Robot):
 
     def receive_event(self, event_type, data):
         if event_type == ORE_POSITIONS:
+            self.color = (1, 0.5, 0.5)
             ores = data[0]
-            self.ores += list(ores)
+            self.ores += [o for o in ores if o not in self.ores]
             self.state = COLLECT_ORES
         elif event_type == TRANSPORTER_REQUEST:
-            broker_id, N = data
-            if self.state == IDLE or len(self.ores) + N <= self.mp.S:
+            broker_id, ores = data
+            new_ores = [o for o in ores if o not in self.ores]
+            self.color = (0.6, 0.3, 0.3)
+            if self.state == IDLE or len(self.ores) + len(new_ores) <= self.mp.S:
                 self.state = BROKER_RESPONDING
                 self.counter = 0
                 self.broker_id = broker_id
+                self.color = (1, 0.5, 0)
         elif event_type == BASE_FULL:
             self.base_full = True

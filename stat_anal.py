@@ -12,6 +12,8 @@ for range_name, rng in experiments.items():
     mu = []
     ssqr = []
     labels = []
+    emu = []
+    epos = []
 
     for k, params in enumerate(rng):
         if type(params) == int or type(params) == float:
@@ -23,11 +25,20 @@ for range_name, rng in experiments.items():
         label = ', '.join(label)
         labels.append(label)
 
-        _data = data[k, :, 0, -1]
-        mu.append(_data.mean())
-        ssqr.append(_data.var(ddof=1))
+        ores = data[k, :, 0, -1]
+        mu.append(ores.mean())
+        ssqr.append(ores.var(ddof=1))
+
+        energy = data[k, :, 1, -1]
+        emu.append(energy.mean())
+
+        ores *= 0.01 * 200 ** 2 * 0.05
+        epo = (energy / ores).mean()
+        epos.append(epo)
 
     print(mu)
+    #print(emu)
+    print(epos)
 
     for i in range(K):
         for j in range(i+1, K):

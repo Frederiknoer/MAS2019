@@ -2,6 +2,7 @@ from pygridmas import Colors, Vec2D
 from robot import Robot
 from broker import Broker
 from common import ORE, EXPLORER, TRANSPORTER, ORE_POSITIONS, BASE_FULL
+import random
 
 ATTEMPT_DELEGATION = "ATTEMPT_DELEGATION"
 MOVE_TO_TARGET = "MOVE_TO_TARGET"
@@ -14,6 +15,7 @@ class Explorer(Robot):
     step_size = 10
     ore_data = None
     ores = None
+    old_ores = []
     dir: Vec2D = None
     broker: Broker = None
     counter = 0
@@ -37,6 +39,7 @@ class Explorer(Robot):
             self.set_new_dir_target()
             self.ore_data = None
             self.ores = []
+            self.old_ores = list(self.ores)
         else:
             base = self.closest_base()
             dir = self.vec_to(base.pos())
@@ -53,19 +56,13 @@ class Explorer(Robot):
         super().before_step()
         self.color = Colors.GREEN if self.company_id == 0 else Colors.CYAN
 
-        if self.at_base() and False:
-            self.dir = Vec2D.random_dir().inf_normalize()
-            self.set_new_dir_target()
-            if self.ores:
-                self.prepare_ore_data()
-                self.state = ATTEMPT_DELEGATION
         if self.energy_low() or self.base_full:
             self.reactive_move_towards(self.closest_base().pos())
         elif self.state == ATTEMPT_DELEGATION:
             self.broker.attempt_ore_data_delegation(self.ore_data, self.handle_broker_status)
             self.state = MOVE_TO_TARGET
         elif self.broker.step():
-            self.color = Colors.WHITE
+            pass
         elif self.state == MOVE_TO_TARGET:
             if self.reached_target():
                 if self.at_base():
@@ -76,24 +73,24 @@ class Explorer(Robot):
                     self.state = SCAN
             else:
                 self.reactive_move_towards(self.target)
-
         elif self.state == SCAN:
-            self.color = Colors.MAGENTA
             agents = self.box_scan(self.mp.P // 2)
             self.consume_energy(self.mp.P)
             ores = [a for a in agents if ORE in a.group_ids]
             explorers = [a for a in agents if EXPLORER in a.group_ids]
             transporters = [a for a in agents if TRANSPORTER in a.group_ids]
             robots = explorers + transporters
+            self.color = (1, 1, 0)
 
             ores = [(o.idx, o.pos()) for o in ores]
-            ores = [o for o in ores if o not in self.ores]
+            ores = [o for o in ores if o not in self.ores and o not in self.old_ores]
+            self.old_ores = self.old_ores[:self.mp.S - len(self.ores)]
             already_found_ores = bool(self.ores)
             self.ores = (self.ores + ores)[:self.mp.S]
             if len(self.ores) >= self.mp.S or already_found_ores and self.counter >= 5:
                 self.prepare_ore_data()
                 self.state = ATTEMPT_DELEGATION
-            elif robots:
+            elif robots and random.random() < 0.5:
                 rel_r_pos = [self.vec_to(r.pos()) for r in robots]
                 cog_dir = sum(rel_r_pos, Vec2D())
                 cog = self.pos() + cog_dir
@@ -118,6 +115,7 @@ class Explorer(Robot):
     def receive_event(self, event_type, data):
         self.broker.receive_event(event_type, data)
         if event_type == ORE_POSITIONS:
+            self.color = (0.5, 1, 0.5)
             ores, ttl, idxs = data
             idxs.append(self.idx)
             self.ores += [o for o in ores if o not in self.ores]

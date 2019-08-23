@@ -1,6 +1,6 @@
 from common import CompanyEntity, TRANSPORTER_IDLE, COMPANY, BROKER
 from common import TRANSPORTER_REQUEST, TRANSPORTER, TRANSPORTER_RESPONSE, ORE_POSITIONS
-import random
+from pygridmas import Colors
 
 BROKER_PING = "BROKER_PING"
 BROKER_REQUEST = "BROKER_REQUEST"
@@ -33,24 +33,26 @@ class Broker:
 
     def request_transporter(self):
         self.state = TRANSPORTER_REQUESTING
-        data = (self.ce.idx, len(self.ore_data[0]))
+        data = (self.ce.idx, self.ore_data[0])
         self.ce.emit_event(
             self.ce.mp.I // 2, TRANSPORTER_REQUEST, data,
             '{}{}'.format(TRANSPORTER, self.ce.company_id)
         )
         self.ce.consume_energy(1)
+        self.ce.color = Colors.WHITE
         self.nearby = []
         self.counter = 0
 
     def request_broker(self):
         self.state = BROKER_REQUESTING
         _, _, idxs = self.ore_data
-        data = (self.base_dist(), idxs, len(self.ore_data[0]))
+        data = (self.base_dist(), idxs, self.ore_data[0])
         self.ce.emit_event(
             self.ce.mp.I // 2, BROKER_REQUEST, data,
             '{}{}'.format(COMPANY, self.ce.company_id)
         )
         self.ce.consume_energy(1)
+        self.ce.color = Colors.BLUE
         self.nearby = []
         self.counter = 0
 
@@ -68,6 +70,7 @@ class Broker:
                 if self.nearby:
                     self.nearby.sort()
                     self.ce.emit_event(self.ce.mp.I // 2, ORE_POSITIONS, self.ore_data, self.nearby[0][1])
+                    self.ce.color = Colors.MAGENTA
                     self.ce.consume_energy(1)
                     self.status_cb(True)
                 else:
@@ -86,6 +89,7 @@ class Broker:
                 if self.nearby:
                     self.nearby.sort()
                     self.ce.emit_event(self.ce.mp.I // 2, ORE_POSITIONS, self.ore_data, self.nearby[0][1])
+                    self.ce.color = Colors.MAGENTA
                     self.ce.consume_energy(1)
                     self.status_cb(True)
                 else:
@@ -103,7 +107,10 @@ class Broker:
             # can only handle one broker state at a time
             return
         elif event_type == BROKER_REQUEST:
-            dist, idxs, N = data
-            if self.ce.idx not in idxs and self.base_dist() < dist and len(self.ce.ores) + N <= self.ce.mp.S:
+            dist, idxs, ores = data
+            new_ores = [o for o in ores if o not in self.ce.ores]
+            self.ce.color = (0.4, 0.6, 0.4)
+            if self.ce.idx not in idxs and self.base_dist() < dist and len(self.ce.ores) + len(new_ores) <= self.ce.mp.S:
                 self.state = BROKER_RESPONDING
                 self.request_id = idxs[-1]
+                self.ce.color = Colors.CYAN

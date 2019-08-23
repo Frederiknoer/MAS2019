@@ -3,7 +3,7 @@ from common import CompanyEntity, COMPANY, BASE, BASE_FULL, ORE_DELIVERY
 
 
 class Base(CompanyEntity):
-    color = Colors.BLUE
+    color = Colors.BLACK
     group_ids = {BASE}
     cargo = 0
 
