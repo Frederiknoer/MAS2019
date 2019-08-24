@@ -16,7 +16,7 @@ class BaseArea(Agent):
 
 
 def create_world(mp: MasParams, World=World, Base=Base, Transporter=Transporter, Explorer=Explorer, Ore=Ore):
-    world = World(w=mp.G, h=mp.G, torus_enabled=mp.torus)
+    world = World(w=mp.G, h=mp.G, torus_enabled=True)
 
     n_ores = round(mp.G ** 2 * mp.D)
     for _ in range(n_ores):
