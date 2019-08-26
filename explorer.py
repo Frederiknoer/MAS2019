@@ -54,7 +54,7 @@ class Explorer(Robot):
 
     def step(self):
         super().before_step()
-        self.color = Colors.GREEN if self.company_id == 0 else Colors.CYAN
+        self.color = [Colors.GREEN, Colors.CYAN, Colors.BLUE][self.company_id % 3]
 
         if self.energy_low() or self.base_full:
             self.reactive_move_towards(self.closest_base().pos())
@@ -109,6 +109,11 @@ class Explorer(Robot):
                 self.set_new_dir_target()
                 self.state = MOVE_TO_TARGET
             self.counter += 1
+
+        if self.at_base() and not self.ore_data:
+            self.dir = Vec2D.random_dir().inf_normalize()
+            self.set_new_dir_target()
+
         self.broker.nearby_idle_transporters = 0
         super().after_step()
 

@@ -1,30 +1,27 @@
 import imageio
 import numpy as np
-from main import create_world
-from masparams import MasParams
-
-image_count = 300
-cycles_per_image = 10
 
 
-def to_img(world):
+def to_img(world, scale=1):
     w, h = world.w, world.h
     img = np.empty((h, w, 3), dtype=np.float)
     for y in range(h):
+        yy = h - y - 1
         for x in range(w):
             if world.m[y][x]:
                 color = world.m[y][x][-1].color
             else:
                 color = (0, 0, 0)
-            img[y, x] = color
-    return img
+            img[yy, x] = color
+    return np.kron(img, np.ones((scale, scale, 1)))
 
 
-world = create_world(MasParams())
-images = [to_img(world)]
-for i in range(image_count):
-    for j in range(cycles_per_image):
-        world.step()
-    images.append(to_img(world))
-
-imageio.mimsave("my.gif", images, fps=30)
+def create_gif(filename, world, frames, fps=1, scale=3, include_blanc=True):
+    images = []
+    for i in frames:
+        while world.time < i:
+            world.step()
+        images.append(to_img(world, scale))
+    if include_blanc:
+        images.append(np.zeros_like(images[0]))
+    imageio.mimsave("{}.gif".format(filename), images, fps=fps)

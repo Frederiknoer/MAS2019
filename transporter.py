@@ -32,7 +32,7 @@ class Transporter(Robot):
     def step(self):
         super().before_step()
 
-        self.color = Colors.RED
+        self.color = [Colors.RED, (1, 0.5, 0.2), (1, 0.8, 0.8)][self.company_id % 3]
 
         if self.at_base() and self.cargo:
             self.emit_event(0, ORE_DELIVERY, self.cargo, BASE)

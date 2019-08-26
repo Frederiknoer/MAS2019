@@ -2,6 +2,10 @@ import math
 
 
 class MasParams:
+    def __init__(self, **args):
+        for name, val in args.items():
+            self.__setattr__(name, val)
+
     G = 200  # Size of planet (GxG)
     D = 0.05  # Ore density
     T = 3000  # Maximum number of cycles

@@ -6,6 +6,7 @@ from base import Base
 from masparams import MasParams, DefaultParams
 import random
 import math
+from img import create_gif
 
 
 class BaseArea(Agent):
@@ -46,8 +47,6 @@ def create_world(mp: MasParams, World=World, Base=Base, Transporter=Transporter,
         world.add_agent(base, base_pos)
         bases.append(base)
 
-
-
     for base_pos, comp_id in zip(base_positions, company_ids):
         _bases = bases if mp.M == 1 else [bases[comp_id]]
 
@@ -60,21 +59,24 @@ def create_world(mp: MasParams, World=World, Base=Base, Transporter=Transporter,
 
 
 def main():
-    zoom = True
+    random.seed(0)
+
     mp = DefaultParams()
-    mp.N = 1
-    scale = 3
-    if zoom:
-        mp.G = 50
-        scale = 10
+    mp.N = 3
+    mp.M = 0
+    mp.G = 100
+
     world = create_world(mp)
-    vis = Visualizer(world, scale=scale, target_speed=40, start_paused=True)
-    vis.start()
+
+    if True:
+        create_gif("comp", world, range(0, 500), fps=30, scale=3, include_blanc=False)
+        # create_gif("broker", world, range(112, 123), fps=1, scale=10)
+    else:
+        Visualizer(world, scale=3, target_speed=40, start_paused=True).start()
 
 
 if __name__ == '__main__':
     main()
-
 
 """
 Transporter:
